@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Voice Prescription – static host</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* --- same minimal css as before --- */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,Segoe UI,Tahoma,Geneva,Verdana,sans-serif;background:#f2f5fa;color:#222;line-height:1.4}
+.container{max-width:900px;margin:2rem auto;background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.15);overflow:hidden}
+.header{background:linear-gradient(135deg,#d32f2f,#b71c1c);color:#fff;padding:1.5rem 2rem;text-align:center}
+.header h1{font-size:1.8rem;margin-bottom:.25rem}
+.content{padding:2rem}
+.section{background:#f8f9fa;border-left:5px solid #4caf50;border-radius:8px;padding:1.25rem;margin-bottom:1.5rem}
+.section h2{margin-bottom:.75rem;color:#2c3e50}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem}
+.form-group{display:flex;flex-direction:column}
+.form-group label{font-weight:600;margin-bottom:.25rem}
+.form-group input,.form-group textarea,.form-group select{padding:.5rem;border:1px solid #ccc;border-radius:4px;font-size:.95rem}
+.record-btn{background:#4caf50;color:#fff;border:none;padding:.75rem 1.5rem;border-radius:50px;font-size:1rem;cursor:pointer;transition:background .2s}
+.record-btn:hover{background:#45a049}
+.record-btn:disabled{background:#888;cursor:not-allowed}
+.recording{background:#f44336 !important}
+.status{padding:.5rem .75rem;border-radius:4px;margin:.5rem 0;font-weight:600}
+.status-success{background:#d4edda;color:#155724}
+.status-error{background:#f8d7da;color:#721c24}
+.status-info{background:#d1ecf1;color:#0c5460}
+.transcription-box{background:#fff;border:1px solid #ccc;border-radius:6px;padding:.75rem;margin:.5rem 0;min-height:80px;white-space:pre-wrap}
+.medication-card{background:#fff;border:1px solid #ddd;border-radius:6px;padding:1rem;margin-bottom:1rem}
+.btn{background:#2196f3;color:#fff;border:none;padding:.4rem .8rem;border-radius:4px;cursor:pointer;font-size:.9rem;margin:.15rem}
+.btn:hover{background:#1976d2}
+.btn-success{background:#4caf50}
+.btn-success:hover{background:#45a049}
+@media print{body{background:#fff}.no-print{display:none}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header"><h1>🏥 Voice Prescription</h1><p>Static site – uses OpenAI Whisper</p></div>
+  <div class="content">
+    <!-- voice -->
+    <div class="section no-print">
+      <h2>🎤 Voice Recording</h2>
+      <div style="text-align:center">
+        <button id="recordBtn" class="record-btn">🎤 Start Recording</button>
+        <button id="manualBtn" class="btn">✍️ Manual Entry</button>
+      </div>
+      <div id="status"></div>
+      <div id="transcription" class="transcription-box" style="display:none"></div>
+    </div>
+
+    <!-- doctor -->
+    <div class="section no-print">
+      <h2>⚙️ Doctor Information</h2>
+      <div class="form-grid">
+        <div class="form-group"><label>Doctor Name</label><input id="doctorName" placeholder="Dr. Jane Doe"></div>
+        <div class="form-group"><label>Credentials</label><input id="credentials" placeholder="MD, FRCPC"></div>
+        <div class="form-group"><label>License</label><input id="license" placeholder="License # 12345"></div>
+        <div class="form-group"><label>Clinic</label><input id="clinicName" placeholder="City Medical"></div>
+      </div>
+      <div class="form-group"><label>Address</label><input id="address" placeholder="123 Main St, City, PRO A1A 1A1"></div>
+      <div class="form-grid">
+        <div class="form-group"><label>Phone</label><input id="phone" placeholder="(555) 555-5555"></div>
+        <div class="form-group"><label>Fax</label><input id="fax" placeholder="(555) 555-5556"></div>
+      </div>
+      <button class="btn btn-success" onclick="saveDoctorInfo()">💾 Save</button>
+    </div>
+
+    <!-- prescription -->
+    <div class="section">
+      <h2>📋 Prescription</h2>
+      <h3>Patient</h3>
+      <div class="form-grid">
+        <div class="form-group"><label>Patient Name</label><input id="patientName" placeholder="John Smith"></div>
+        <div class="form-group"><label>Date</label><input type="date" id="prescriptionDate"></div>
+      </div>
+
+      <h3>℞ Medications</h3>
+      <div id="medicationsContainer">
+        <div class="medication-card">
+          <div class="form-grid">
+            <div class="form-group"><label>Name</label><input class="medication-name" placeholder="Lisinopril"></div>
+            <div class="form-group"><label>Dosage</label><input class="medication-dosage" placeholder="10 mg"></div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group"><label>Frequency</label><input class="medication-frequency" placeholder="Once daily"></div>
+            <div class="form-group"><label>Duration</label><input class="medication-duration" placeholder="30 days"></div>
+          </div>
+          <div class="form-group"><label>Instructions</label><textarea class="medication-instructions" rows="2" placeholder="Take in the morning"></textarea></div>
+        </div>
+      </div>
+      <button class="btn" onclick="addMedication()">+ Add Medication</button>
+
+      <div class="form-group"><label>Notes</label><textarea id="prescriptionNotes" rows="3" placeholder="Follow-up in 2 weeks…"></textarea></div>
+
+      <div class="no-print" style="margin-top:1rem">
+        <button class="btn btn-success" onclick="savePrescription()">💾 Save JSON</button>
+        <button class="btn btn-success" onclick="window.print()">🖨️ Print</button>
+      </div>
+
+      <!-- signature -->
+      <div style="margin-top:2rem;padding-top:1rem;border-top:2px solid #ddd">
+        <div class="form-grid">
+          <div>
+            <p><strong>Doctor's Signature</strong></p>
+            <div style="border-bottom:2px solid #000;height:50px;margin:.5rem 0"></div>
+            <p id="doctorSignature">Dr. [Name], Credentials</p>
+            <p id="licenseInfo">License # [Number]</p>
+            <p>Date: <span id="signatureDate"></span></p>
+          </div>
+          <div>
+            <p><strong>Clinic</strong></p>
+            <p id="clinicInfo">Clinic<br>Address<br>Phone | Fax</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { recordWAV, transcribeWhisper, parseText, fillForm, $, $$, status, addMedication, saveDoctorInfo, loadDoctorInfo, updateSignature, savePrescription } from "./whisper.js";
+
+/* ---------- wire buttons ---------- */
+$("#recordBtn").onclick = async () => {
+  $("#recordBtn").disabled = true;
+  $("#recordBtn").classList.add("recording");
+  status("🎤 Recording… speak clearly","info");
+  const wavBlob = await recordWAV();               // 1. browser WAV
+  const text  = await transcribeWhisper(wavBlob);  // 2. Whisper API
+  $("#transcription").textContent = text;
+  $("#transcription").style.display = "block";
+  await parseAndFill(text);                       // 3. rule-based parser
+  $("#recordBtn").disabled = false;
+  $("#recordBtn").classList.remove("recording");
+};
+$("#manualBtn").onclick = async () => {
+  const t = prompt("Enter prescription text:", "Patient: John Smith, prescribing Lisinopril 10 mg once daily for 30 days.");
+  if (t) await parseAndFill(t);
+};
+async function parseAndFill(text){
+  const rx = parseText(text);
+  fillForm(rx);
+  status("✅ Form filled automatically","success");
+}
+$(".btn-success").onclick = savePrescription;
+$("#doctorName").onchange = updateSignature;
+/* ---------- init ---------- */
+document.addEventListener("DOMContentLoaded", () => {
+  loadDoctorInfo();
+  $("#prescriptionDate").value = new Date().toISOString().split("T")[0];
+  $("#signatureDate").textContent = new Date().toLocaleDateString();
+});
+</script>
+</body>
+</html>
